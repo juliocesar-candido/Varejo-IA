@@ -85,7 +85,7 @@ st.markdown(f"""
         color: #d4d4d8;
     }}
 
-    /* Ocultar elementos padrão do Streamlit */
+    /* Ocultar elementos padrao do Streamlit */
     #MainMenu {{visibility: hidden;}}
     header {{visibility: hidden;}}
     footer {{visibility: hidden;}}
@@ -129,7 +129,7 @@ st.markdown(f"""
         padding-top: 100px !important;
     }}
 
-    /* Ocultação dos marcadores de rádio */
+    /* Ocultacao cirurgica dos marcadores de radio */
     div[role="radiogroup"] {{
         gap: 8px !important;
         display: flex !important;
@@ -154,7 +154,7 @@ st.markdown(f"""
         display: none !important;
     }}
     
-    /* Estilização das abas de navegação */
+    /* Estilizacao das abas de navegacao */
     div[role="radiogroup"] label {{
         background-color: transparent !important;
         border: 1px solid transparent !important;
@@ -180,12 +180,12 @@ st.markdown(f"""
         color: #00ffaa !important;
     }}
 
-    /* VÍDEO HERO EM TELA CHEIA (FULL-BLEED) */
+    /* VIDEO HERO EM TELA CHEIA (FULL-BLEED) */
     .video-hero-container {{
         position: relative;
         width: 100vw !important;
         margin-left: calc(-50vw + 50%) !important;
-        height: 85vh;
+        height: 100vh !important;
         min-height: 550px;
         overflow: hidden;
         border-radius: 0px !important;
@@ -241,7 +241,17 @@ st.markdown(f"""
         margin-bottom: 0;
         line-height: 1.6;
     }}
-    .hero-primary-link {
+
+    .hero-buttons-wrapper {{
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 24px;
+        align-items: center;
+        z-index: 2;
+    }}
+
+    .hero-primary-link {{
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -255,20 +265,20 @@ st.markdown(f"""
         font-size: 12px;
         text-decoration: none;
         transition: all 0.2s ease-in-out;
-    }
+    }}
 
     .hero-primary-link:link,
-    .hero-primary-link:visited {
+    .hero-primary-link:visited {{
         color: #000000 !important;
-    }
+    }}
 
-    .hero-primary-link:hover {
+    .hero-primary-link:hover {{
         background: #00ffaa !important;
         color: #000000 !important;
         transform: translateY(-1px);
-    }
+    }}
 
-    .hero-secondary-link {
+    .hero-secondary-link {{
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -283,21 +293,21 @@ st.markdown(f"""
         transition: all 0.2s ease-in-out;
         font-weight: 600;
         font-size: 12px;
-    }
+    }}
 
     .hero-secondary-link:link,
-    .hero-secondary-link:visited {
+    .hero-secondary-link:visited {{
         color: #ffffff !important;
-    }
+    }}
 
-    .hero-secondary-link:hover {
+    .hero-secondary-link:hover {{
         background: rgba(255,255,255,0.12) !important;
         color: #ffffff !important;
         border-color: rgba(255,255,255,0.35);
         transform: translateY(-1px);
-    }
+    }}
 
-    /* FAIXA 1: O NÚCLEO DA PLATAFORMA (BRANCA / DESTAQUE CLARO) */
+    /* FAIXA 1: O NUCLEO DA PLATAFORMA (BRANCA / DESTAQUE CLARO) */
     .section-info-white {{
         background: #ffffff;
         border-top: 1px solid #e4e4e7;
@@ -375,7 +385,7 @@ st.markdown(f"""
         margin-bottom: 0;
     }}
 
-    /* FAIXA 2: EXEMPLO DO FLUXO DE TRABALHO (ESCURA / FLUINDO PARA A SIMULAÇÃO) */
+    /* FAIXA 2: EXEMPLO DO FLUXO DE TRABALHO (ESCURA / FLUINDO PARA A SIMULACAO) */
     .section-example-dark {{
         background: #0b0c0e;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -616,7 +626,7 @@ if st.session_state["aba_ativa"] == "Início":
     </div>
     """, unsafe_allow_html=True)
 
-    # Faixa 1: O Núcleo da Plataforma (BRANCA / DESTAQUE CLARO)
+    # Faixa 1: O NÚCLEO DA PLATAFORMA (BRANCA / DESTAQUE CLARO)
     st.markdown("""<div class="section-info-white">
 <h2>O núcleo da plataforma</h2>
 <p class="section-intro">Uma plataforma SaaS de inteligência preditiva para o varejo, construída para reduzir rupturas, otimizar estoque e gerar previsões de demanda confiáveis em segundos. Veja como utilizar a ferramenta:</p>
@@ -645,7 +655,7 @@ if st.session_state["aba_ativa"] == "Início":
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # Faixa 2: Exemplo do Fluxo de Trabalho (ESCURA / FLUINDO PARA A SIMULAÇÃO)
+    # Faixa 2: EXEMPLO DO FLUXO DE TRABALHO (ESCURA / FLUINDO PARA A SIMULAÇÃO)
     st.markdown("""<div class="section-example-dark">
 <h2>Exemplo do fluxo de trabalho</h2>
 <p>Veja como o sistema apresenta previsões de demanda, recomendações de estoque e métricas de giro usando dados prontos. Esta seção serve como uma demonstração confortável antes de você subir seu próprio documento.</p>
@@ -941,7 +951,7 @@ elif st.session_state["aba_ativa"] == "Metodologia IA":
         Ele garante que, mesmo diante de variações imprevistas nos tempos de entrega dos fornecedores ou picos repentinos 
         de procura, o varejista não sofra com rupturas.
         
-        A fórmula de contingenciamento aplicada na interface calcula o estoque de segurança dinâmico da seguinte forma:
+        A fórmula de contingenciamento applied na interface calcula o estoque de segurança dinâmico da seguinte forma:
         """)
         
         st.latex(r"ES = V_{\text{média}} \times 1.5")

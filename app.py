@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import pickle
 import os
 import base64
@@ -34,6 +35,9 @@ if "arquivo_usuario" not in st.session_state:
 if "df_usuario" not in st.session_state:
     st.session_state["df_usuario"] = None
 
+if "nome_arquivo" not in st.session_state:
+    st.session_state["nome_arquivo"] = None
+
 try:
     if st.query_params.get("ir") == "processamento":
         st.session_state["proxima_aba"] = "Processamento em Lote"
@@ -42,9 +46,10 @@ try:
 except Exception:
     pass
 
+# Otimização para o carregamento do vídeo local com garantia de exibição
 @st.cache_data
 def obter_video_base64():
-    caminhos_possiveis = ["background.mp4", "background"]
+    caminhos_possiveis = ["background_otimizado.mp4", "background.mp4", "background", "background.MP4"]
     for caminho in caminhos_possiveis:
         if os.path.exists(caminho):
             try:
@@ -53,7 +58,7 @@ def obter_video_base64():
                 return f"data:video/mp4;base64,{base64.b64encode(dados).decode()}"
             except Exception:
                 pass
-    return "https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-and-numbers-31948-large.mp4"
+    return "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
 
 video_src = obter_video_base64()
 
@@ -85,7 +90,7 @@ st.markdown(f"""
         color: #d4d4d8;
     }}
 
-    /* Ocultar elementos padrao do Streamlit */
+    /* Ocultar elementos padrão do Streamlit */
     #MainMenu {{visibility: hidden;}}
     header {{visibility: hidden;}}
     footer {{visibility: hidden;}}
@@ -180,13 +185,13 @@ st.markdown(f"""
         color: #00ffaa !important;
     }}
 
-    /* VIDEO HERO EM TELA CHEIA (FULL-BLEED) */
+    /* VIDEO HERO EM TELA CHEIA (FULL-BLEED 100vh) */
     .video-hero-container {{
         position: relative;
         width: 100vw !important;
         margin-left: calc(-50vw + 50%) !important;
         height: 100vh !important;
-        min-height: 550px;
+        min-height: 650px;
         overflow: hidden;
         border-radius: 0px !important;
         margin-top: -100px !important;
@@ -423,8 +428,8 @@ st.markdown(f"""
     }}
 
     .section-sample-table {{
-        background: rgba(255,255,255,0.12);
-        border-radius: 14px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 12px;
         padding: 20px;
         color: #e5e7eb;
         font-family: 'Inter', sans-serif;
@@ -523,6 +528,13 @@ st.markdown(f"""
     .status-critical {{
         border-left: 3px solid #ef4444 !important;
     }}
+
+    /* Remover bordas e espacamentos do formulario para integracao visual perfeita */
+    div[data-testid="stForm"] {{
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -566,6 +578,7 @@ with col_reset:
         st.session_state["arquivo_carregado"] = False
         st.session_state["arquivo_usuario"] = None
         st.session_state["df_usuario"] = None
+        st.session_state["nome_arquivo"] = None
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -619,8 +632,8 @@ if st.session_state["aba_ativa"] == "Início":
             <h1 class="hero-title">Transforme dados históricos de vendas em insights preditivos acionáveis impulsionados por IA</h1>
             <p class="hero-subtitle">Antecipe a demanda do mercado, otimize o giro operacional e elimine rupturas de estoque com nossa inteligência analítica ponta a ponta.</p>
             <div class="hero-buttons-wrapper">
-                <a href="?ir=processamento" class="hero-primary-link">Iniciar Simulação</a>
-                <a href="#exemplo-demonstrativo" class="hero-secondary-link">Ver Exemplo ↓</a>
+                <a href="?ir=processamento" target="_self" class="hero-primary-link">Iniciar Simulação</a>
+                <a href="#exemplo-demonstrativo" target="_self" class="hero-secondary-link">Ver Exemplo ↓</a>
             </div>
         </div>
     </div>
@@ -655,7 +668,7 @@ if st.session_state["aba_ativa"] == "Início":
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # Faixa 2: EXEMPLO DO FLUXO DE TRABALHO (ESCURA / FLUINDO PARA A SIMULAÇÃO)
+    # Faixa 2: EXEMPLO DO FLUXO DE TRABALHO (ESCURA / FLUINDO PARA A SIMULACAO)
     st.markdown("""<div class="section-example-dark">
 <h2>Exemplo do fluxo de trabalho</h2>
 <p>Veja como o sistema apresenta previsões de demanda, recomendações de estoque e métricas de giro usando dados prontos. Esta seção serve como uma demonstração confortável antes de você subir seu próprio documento.</p>
@@ -667,40 +680,67 @@ if st.session_state["aba_ativa"] == "Início":
     st.markdown("<h2 style='color:#ffffff; font-weight: 600; font-size: 22px; margin-bottom: 5px;'>Exemplo Demonstrativo de Vendas Unitárias</h2>", unsafe_allow_html=True)
     st.markdown("<p style='color:#737373; font-size:13px; margin-bottom:25px;'>Simule abaixo o comportamento de produtos específicos sob condições variáveis.</p>", unsafe_allow_html=True)
 
+    produtos_ativos = list(df_demo['Produto'].unique())
+    prod_inicial = produtos_ativos[0] if produtos_ativos else "Teclado Mecânico"
+    preco_inicial = float(df_demo[df_demo['Produto'] == prod_inicial]['Preco_Unitario'].iloc[0]) if prod_inicial in list(df_demo['Produto']) else 250.0
+
+    if "sim_params" not in st.session_state:
+        st.session_state["sim_params"] = {
+            "produto": prod_inicial,
+            "preco_venda": preco_inicial,
+            "estoque_fisico": 80,
+            "val_sazonal": 0
+        }
+
     col_form, col_result = st.columns([1, 2.3], gap="large")
     
     with col_form:
         st.markdown("<h3 style='font-size: 15px; font-weight:600; color:#ffffff;'>Parâmetros da Simulação</h3>", unsafe_allow_html=True)
-        produtos_ativos = list(df_demo['Produto'].unique())
-        produto = st.selectbox("Selecione o Produto:", produtos_ativos)
         
-        preco_referencia = float(df_demo[df_demo['Produto'] == produto]['Preco_Unitario'].iloc[0])
-        preco_venda = st.number_input("Preço de Venda (R$):", value=preco_referencia, step=10.0)
-        
-        estoque_fisico = st.slider("Estoque Atual na Loja:", 0, 500, 80)
-        
-        dia_sazonal = st.radio("Sazonalidade (Feriado/Fim de Semana)?", ("Não", "Sim"))
-        val_sazonal = 1 if dia_sazonal == "Sim" else 0
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        calcular_unitario = st.button("Calcular Previsão", key="calc_unit", use_container_width=True)
+        with st.form(key="form_simulacao_unit", clear_on_submit=False):
+            produto = st.selectbox("Selecione o Produto:", produtos_ativos)
+            
+            preco_referencia = float(df_demo[df_demo['Produto'] == produto]['Preco_Unitario'].iloc[0]) if produto in list(df_demo['Produto']) else 250.0
+            preco_venda = st.number_input("Preço de Venda (R$):", value=preco_referencia, step=10.0)
+            
+            estoque_fisico = st.slider("Estoque Atual na Loja:", 0, 500, 80)
+            
+            dia_sazonal = st.radio("Sazonalidade (Feriado/Fim de Semana)?", ("Não", "Sim"))
+            val_sazonal = 1 if dia_sazonal == "Sim" else 0
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            calcular_unitario = st.form_submit_button("Calcular Previsão", use_container_width=True)
+            
+            if calcular_unitario:
+                st.session_state["sim_params"] = {
+                    "produto": produto,
+                    "preco_venda": preco_venda,
+                    "estoque_fisico": estoque_fisico,
+                    "val_sazonal": val_sazonal
+                }
 
     with col_result:
         st.markdown("<h3 style='font-size: 15px; font-weight:600; color:#ffffff;'>Resultados da Inteligência Artificial</h3>", unsafe_allow_html=True)
         
+        params = st.session_state["sim_params"]
+        p_produto = params["produto"]
+        p_preco = params["preco_venda"]
+        p_estoque = params["estoque_fisico"]
+        p_sazonal = params["val_sazonal"]
+
         dados_input = pd.DataFrame(0, index=[0], columns=colunas_modelo)
-        dados_input["Preco_Unitario"] = preco_venda
-        dados_input["Estoque_Disponivel"] = estoque_fisico
-        dados_input["Fim_De_Semana"] = val_sazonal
+        dados_input["Preco_Unitario"] = p_preco
+        dados_input["Estoque_Disponivel"] = p_estoque
+        dados_input["Fim_De_Semana"] = p_sazonal
         dados_input["Mes"] = datetime.now().month
         dados_input["Dia_Da_Semana"] = datetime.now().weekday()
         
-        col_prod = f"Produto_{produto}"
+        col_prod = f"Produto_{p_produto}"
         if col_prod in colunas_modelo:
             dados_input[col_prod] = 1
         
         pred_vendas = int(np.round(modelo.predict(dados_input)[0]))
-        media_historica = df_demo[df_demo['Produto'] == produto]['Vendas_Do_Dia'].mean()
+        media_historica = df_demo[df_demo['Produto'] == p_produto]['Vendas_Do_Dia'].mean() if p_produto in list(df_demo['Produto']) else 20
         estoque_seguranca = int(np.round(media_historica * 1.5))
         
         st.markdown(f"""
@@ -716,15 +756,15 @@ if st.session_state["aba_ativa"] == "Início":
         </div>
         """, unsafe_allow_html=True)
         
-        diferenca = estoque_fisico - pred_vendas
+        diferenca = p_estoque - pred_vendas
         if diferenca < 0:
             st.markdown(f"""
             <div class="status-card status-critical">
                 <strong style="color: #ffffff; font-size: 14px;">Status: Ruptura Iminente</strong><br>
-                <span style="font-size: 13px; color: #a3a3a3;">O volume em estoque ({estoque_fisico} un.) não cobrirá as vendas estimadas para amanhã ({pred_vendas} un.). Providencie {abs(diferenca)} unidades adicionais para suprir a demanda.</span>
+                <span style="font-size: 13px; color: #a3a3a3;">O volume em estoque ({p_estoque} un.) não cobrirá as vendas estimadas para amanhã ({pred_vendas} un.). Providencie {abs(diferenca)} unidades adicionais para suprir a demanda.</span>
             </div>
             """, unsafe_allow_html=True)
-        elif estoque_fisico < estoque_seguranca:
+        elif p_estoque < estoque_seguranca:
             st.markdown(f"""
             <div class="status-card status-warning">
                 <strong style="color: #ffffff; font-size: 14px;">Status: Estoque de Alerta</strong><br>
@@ -747,36 +787,46 @@ elif st.session_state["aba_ativa"] == "Processamento em Lote":
     
     with col_up_1:
         st.markdown("<h3 style='font-size:15px; font-weight:600; color:#ffffff;'>Envio do Inventário</h3>", unsafe_allow_html=True)
+        
         arquivo_usuario = st.file_uploader(
             "Arraste e solte o inventário de vendas (.csv) no campo abaixo:", 
             type=["csv"],
             key="uploader_arquivo"
         )
         
-        if arquivo_usuario is None:
+        # Gerenciamento robusto de persistência do upload
+        if arquivo_usuario is not None:
+            try:
+                df_carregado = pd.read_csv(arquivo_usuario)
+                st.session_state["arquivo_carregado"] = True
+                st.session_state["df_usuario"] = df_carregado.copy()
+                st.session_state["nome_arquivo"] = arquivo_usuario.name
+                st.success(f"✓ Planilha '{arquivo_usuario.name}' carregada com sucesso!")
+            except Exception as e:
+                st.error(f"Erro na leitura do arquivo enviado: {e}")
+        
+        # Exibição do estado do arquivo ativo
+        if st.session_state.get("arquivo_carregado") and st.session_state.get("df_usuario") is not None:
+            df_ativo = st.session_state["df_usuario"]
+            nome_doc = st.session_state.get("nome_arquivo", "inventario_customizado.csv")
+            st.markdown(f"""
+            <div class="status-card status-safe" style="margin-bottom: 20px; background: rgba(0, 255, 170, 0.03);">
+                <strong style="color: #ffffff;">📄 Documento do Usuário Ativo: {nome_doc}</strong><br>
+                <span style="font-size: 13px; color: #a3a3a3;">
+                    O inventário com {len(df_ativo)} registros está pronto no sistema. Você pode alternar livremente entre as guias.
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            df_ativo = df_demo
             st.markdown("""
             <div class="status-card status-warning" style="margin-bottom: 20px;">
                 <strong style="color: #ffffff;">Banco de Dados de Demonstração Ativo</strong><br>
                 <span style="font-size: 13px; color: #a3a3a3;">
-                    Nenhum arquivo customizado foi carregado. Atualmente estamos utilizando um histórico simulado 
-                    de varejo de eletrônicos para que você possa testar os recursos do sistema.
+                    Nenhum arquivo customizado foi carregado ainda. Atualmente estamos utilizando o inventário simulado para os testes do sistema.
                 </span>
             </div>
             """, unsafe_allow_html=True)
-            df_ativo = df_demo
-            st.session_state["arquivo_carregado"] = False
-            st.session_state["df_usuario"] = None
-        else:
-            try:
-                df_ativo = pd.read_csv(arquivo_usuario)
-                st.success("Tabela carregada e integrada ao mecanismo de inteligência artificial com sucesso!")
-                st.session_state["arquivo_carregado"] = True
-                st.session_state["df_usuario"] = df_ativo.copy()
-            except Exception as e:
-                st.error(f"Erro na leitura dos dados: {e}")
-                df_ativo = df_demo
-                st.session_state["arquivo_carregado"] = False
-                st.session_state["df_usuario"] = None
                 
         st.markdown("---")
         st.markdown("<h3 style='font-size:14px; font-weight:600; color:#ffffff;'>Estrutura Requerida de Colunas</h3>", unsafe_allow_html=True)
@@ -815,114 +865,307 @@ elif st.session_state["aba_ativa"] == "Processamento em Lote":
                 X_lote = df_dummies[colunas_modelo]
                 df_proc["Previsao_IA"] = np.round(modelo.predict(X_lote)).astype(int)
                 df_proc["Balanco_Estoque"] = df_proc["Estoque_Disponivel"] - df_proc["Previsao_IA"]
+                
+                # Salva o resultado no estado do usuário para persistir em todas as abas
                 st.session_state["df_usuario"] = df_proc.copy()
                 st.session_state["arquivo_carregado"] = True
-                
-                total_estimado = df_proc["Previsao_IA"].sum()
-                rupturas = len(df_proc[df_proc["Balanco_Estoque"] < 0])
-                faturamento_estimado = (df_proc["Previsao_IA"] * df_proc["Preco_Unitario"]).sum()
-                
-                st.markdown(f"""
-                <div class="glass-card" style="margin-top: 15px;">
-                    <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Volume Total de Vendas Projetadas</span>
-                    <h2 style="color: #ffffff; margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_inteiro(total_estimado)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h2>
-                </div>
-                <div class="glass-card">
-                    <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Faturamento Estimado</span>
-                    <h2 style="color: #00ffaa; margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_moeda(faturamento_estimado)}</h2>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if rupturas > 0:
-                    st.markdown(f"""
-                    <div class="status-card status-critical">
-                        <strong style="color: #ffffff; font-size: 14px;">Gargalos Logísticos Encontrados</strong><br>
-                        <span style="font-size: 13px; color: #a3a3a3;">Foram identificados {rupturas} itens com alto risco de ruptura imediata em gôndola. Recomendamos conferência na aba Giro & Estoque.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown("""
-                    <div class="status-card status-safe">
-                        <strong style="color: #ffffff; font-size: 14px;">Cadeia de Suprimentos Conforme</strong><br>
-                        <span style="font-size: 13px; color: #a3a3a3;">Não foram encontrados riscos de desabastecimento no lote analisado.</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                csv_saida = df_proc.to_csv(index=False).encode('utf-8')
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.download_button(
-                    label="Exportar Planilha de Resultados",
-                    data=csv_saida,
-                    file_name="predicoes_demanda.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
+                st.success("Previsões geradas com sucesso!")
             except Exception as e:
                 st.error(f"Ocorreu um erro ao estruturar as previsões da planilha: {e}")
 
-elif st.session_state["aba_ativa"] == "Giro & Estoque":
-    st.markdown("<h2 style='font-size:22px; font-weight:600; margin-bottom:5px; color:#ffffff;'>Giro de Estoque & Análise Preditiva</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #737373; font-size: 14px;'>Acompanhe o giro real e o saldo de estoque do seu arquivo carregado. Faça upload para ativar métricas específicas do seu negócio.</p>", unsafe_allow_html=True)
+        # Se as previsões já foram geradas para a planilha ativa (ou reutilizadas da sessão)
+        df_atual = st.session_state.get("df_usuario")
+        if df_atual is None:
+            df_atual = df_ativo
 
-    if not st.session_state.get("arquivo_carregado") or st.session_state.get("df_usuario") is None:
-        st.markdown("""
-        <div class="status-card status-warning" style="margin-top: 20px;">
-            <strong style="color: #ffffff; font-size: 14px;">Envie um documento para ativar o Giro & Estoque</strong><br>
-            <span style="font-size: 13px; color: #a3a3a3;">Faça upload do seu inventário na aba de Processamento em Lote para visualizar giro, estoque e riscos logísticos do seu próprio arquivo.</span>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        df_usuario = st.session_state["df_usuario"].copy()
-        try:
-            df_usuario['Data'] = pd.to_datetime(df_usuario['Data'])
-        except Exception:
-            pass
+        if df_atual is not None and "Previsao_IA" in df_atual.columns:
+            total_estimado = df_atual["Previsao_IA"].sum()
+            rupturas = len(df_atual[df_atual["Balanco_Estoque"] < 0])
+            faturamento_estimado = (df_atual["Previsao_IA"] * df_atual["Preco_Unitario"]).sum()
+            
+            st.markdown(f"""
+            <div class="glass-card" style="margin-top: 15px;">
+                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Volume Total de Vendas Projetadas</span>
+                <h2 style="color: #ffffff; margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_inteiro(total_estimado)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h2>
+            </div>
+            <div class="glass-card">
+                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Faturamento Estimado</span>
+                <h2 style="color: #00ffaa; margin: 4px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_moeda(faturamento_estimado)}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if rupturas > 0:
+                st.markdown(f"""
+                <div class="status-card status-critical">
+                    <strong style="color: #ffffff; font-size: 14px;">Gargalos Logísticos Encontrados</strong><br>
+                    <span style="font-size: 13px; color: #a3a3a3;">Foram identificados {rupturas} itens com alto risco de ruptura imediata em gôndola. Recomendamos conferência na aba Giro & Estoque.</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div class="status-card status-safe">
+                    <strong style="color: #ffffff; font-size: 14px;">Cadeia de Suprimentos Conforme</strong><br>
+                    <span style="font-size: 13px; color: #a3a3a3;">Não foram encontrados riscos de desabastecimento no lote analisado.</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            csv_saida = df_atual.to_csv(index=False).encode('utf-8')
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.download_button(
+                label="Exportar Planilha de Resultados",
+                data=csv_saida,
+                file_name="predicoes_demanda.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
-        produtos_usuario = list(df_usuario['Produto'].unique()) if 'Produto' in df_usuario.columns else []
-        produto_hist = st.selectbox("Selecione o Produto para Análise Cronológica:", produtos_usuario)
-        df_grafico = df_usuario[df_usuario['Produto'] == produto_hist].sort_values(by="Data") if produto_hist else df_usuario
+    # SEÇÃO EXPOSITIVA COMPLETA: CARDS DE DESTAQUE + TABELA DETALHADA
+    df_atual = st.session_state.get("df_usuario")
+    if df_atual is not None and "Previsao_IA" in df_atual.columns:
+        st.markdown("<br><hr style='border-color: rgba(255,255,255,0.08);'><br>", unsafe_allow_html=True)
+        
+        # Cálculos para os novos Cards de Destaque
+        prod_maior_demanda = df_atual.groupby("Produto")["Previsao_IA"].sum().idxmax()
+        vol_maior_demanda = df_atual.groupby("Produto")["Previsao_IA"].sum().max()
+        
+        df_deficit = df_atual[df_atual["Balanco_Estoque"] < 0]
+        if not df_deficit.empty:
+            pior_item = df_deficit.groupby("Produto")["Balanco_Estoque"].sum().idxmin()
+            maior_deficit = abs(df_deficit.groupby("Produto")["Balanco_Estoque"].sum().min())
+            texto_critico = f"{pior_item} (-{maior_deficit} un.)"
+        else:
+            texto_critico = "Nenhum déficit crítico"
 
-        fig = px.line(
-            df_grafico,
-            x="Data",
-            y="Vendas_Do_Dia" if 'Vendas_Do_Dia' in df_grafico.columns else df_grafico.columns[0],
-            title=f"Estudo Histórico - {produto_hist}",
-            labels={"Vendas_Do_Dia": "Vendas Diárias", "Data": "Cronologia"},
-            line_shape="spline"
+        st.markdown("<h3 style='font-size: 18px; font-weight: 600; color: #ffffff; margin-bottom: 15px;'>Destaques do Inventário & Diagnósticos de IA</h3>", unsafe_allow_html=True)
+        
+        col_c1, col_c2, col_c3 = st.columns(3, gap="medium")
+        with col_c1:
+            st.markdown(f"""
+            <div class="glass-card" style="margin-bottom:0;">
+                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #00ffaa; font-weight:600;">🔥 Campeão de Demanda</span>
+                <h3 style="color: #ffffff; margin: 6px 0 2px 0; font-size: 18px; font-weight: 600;">{prod_maior_demanda}</h3>
+                <span style="font-size: 12px; color: #a3a3a3;">{formatar_inteiro(vol_maior_demanda)} unidades projetadas</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_c2:
+            st.markdown(f"""
+            <div class="glass-card" style="margin-bottom:0;">
+                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #ef4444; font-weight:600;">🚨 Maior Risco de Ruptura</span>
+                <h3 style="color: #ffffff; margin: 6px 0 2px 0; font-size: 18px; font-weight: 600;">{texto_critico}</h3>
+                <span style="font-size: 12px; color: #a3a3a3;">Necessita reabastecimento imediato</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_c3:
+            total_itens = len(df_atual)
+            st.markdown(f"""
+            <div class="glass-card" style="margin-bottom:0;">
+                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #3b82f6; font-weight:600;">📦 Registros Auditados</span>
+                <h3 style="color: #ffffff; margin: 6px 0 2px 0; font-size: 18px; font-weight: 600;">{total_itens} linhas de inventário</h3>
+                <span style="font-size: 12px; color: #a3a3a3;">Totalmente processadas via Random Forest</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        col_tb_title, col_tb_callout = st.columns([2, 1], gap="large")
+        
+        with col_tb_title:
+            st.markdown("<h3 style='font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 5px;'>Detalhamento Linha por Linha</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #737373; font-size: 13px;'>Prévia detalhada contendo as projeções e o saldo de estoque calculado.</p>", unsafe_allow_html=True)
+
+        with col_tb_callout:
+            st.markdown("""
+            <div class="status-card status-safe" style="margin-top: 0; background: rgba(0, 255, 170, 0.03);">
+                <strong style="color: #ffffff; font-size: 13px;">⚡ Visualização Gráfica Liberada</strong><br>
+                <span style="font-size: 12px; color: #a3a3a3;">Acesse a aba <strong>Giro & Estoque</strong> no menu superior para explorar gráficos de tendência Plotly do seu documento.</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        df_exibicao = df_atual.copy()
+        df_exibicao['Data'] = pd.to_datetime(df_exibicao['Data']).dt.strftime('%Y-%m-%d')
+        
+        def definir_status(row):
+            if row['Balanco_Estoque'] < 0:
+                return "🔴 Ruptura Iminente"
+            elif row['Balanco_Estoque'] < (row['Previsao_IA'] * 1.5):
+                return "🟡 Alerta de Reabastecimento"
+            else:
+                return "🟢 Estoque Ok"
+
+        df_exibicao['Status_Logistico'] = df_exibicao.apply(definir_status, axis=1)
+        
+        colunas_ver = ['Data', 'Produto', 'Preco_Unitario', 'Estoque_Disponivel', 'Previsao_IA', 'Balanco_Estoque', 'Status_Logistico']
+        colunas_existentes = [c for c in colunas_ver if c in df_exibicao.columns]
+        
+        df_render = df_exibicao[colunas_existentes].rename(columns={
+            "Preco_Unitario": "Preço Unit. (R$)",
+            "Estoque_Disponivel": "Estoque Atual",
+            "Previsao_IA": "Previsão IA (un)",
+            "Balanco_Estoque": "Saldo Estimado",
+            "Status_Logistico": "Status Logístico"
+        })
+
+        st.dataframe(
+            df_render,
+            use_container_width=True,
+            hide_index=True,
+            height=320
         )
 
-        fig.update_traces(line_color="#00ffaa", line_width=2)
-        fig.update_layout(
+elif st.session_state["aba_ativa"] == "Giro & Estoque":
+    st.markdown("<h2 style='font-size:22px; font-weight:600; margin-bottom:5px; color:#ffffff;'>Giro de Estoque & Análise Preditiva</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #737373; font-size: 14px;'>Acompanhe curvas temporais de giro, saldos em gôndola e comparações por produto.</p>", unsafe_allow_html=True)
+
+    # Determinar a base de dados ativa (usuário ou demo)
+    if st.session_state.get("arquivo_carregado") and st.session_state.get("df_usuario") is not None:
+        df_analise = st.session_state["df_usuario"].copy()
+    else:
+        df_analise = df_demo.copy()
+
+    try:
+        df_analise['Data'] = pd.to_datetime(df_analise['Data'])
+    except Exception:
+        pass
+
+    produtos_disponiveis = list(df_analise['Produto'].unique()) if 'Produto' in df_analise.columns else []
+
+    col_sel_p, col_sel_info = st.columns([1.5, 2], gap="large")
+
+    with col_sel_p:
+        produto_selecionado = st.selectbox(
+            "Selecione o Produto para Análise de Giro:",
+            produtos_disponiveis,
+            key="select_produto_giro"
+        )
+
+    with col_sel_info:
+        if st.session_state.get("arquivo_carregado"):
+            nome_arq = st.session_state.get("nome_arquivo", "Inventário Carregado")
+            st.markdown(f"<span style='color: #00ffaa; font-weight:600; font-size:13px;'>✓ Analisando: {nome_arq}</span>", unsafe_allow_html=True)
+        else:
+            st.markdown("<span style='color: #eab308; font-size:13px;'>ⓘ Exibindo Banco de Dados de Demonstração (Envie uma planilha na aba Processamento em Lote para ver seus dados).</span>", unsafe_allow_html=True)
+
+    df_prod = df_analise[df_analise['Produto'] == produto_selecionado].sort_values(by="Data") if produto_selecionado else df_analise
+
+    # Determinar coluna de demanda/vendas
+    col_demanda = None
+    if 'Vendas_Do_Dia' in df_prod.columns:
+        col_demanda = 'Vendas_Do_Dia'
+        label_demanda = "Vendas Reais"
+    elif 'Previsao_IA' in df_prod.columns:
+        col_demanda = 'Previsao_IA'
+        label_demanda = "Demanda Prevista (IA)"
+
+    # --- GRÁFICO PRINCIPAL: EVOLUÇÃO TEMPORAL MULTI-EIXO ---
+    fig_temporal = go.Figure()
+
+    # Linha de Estoque
+    if 'Estoque_Disponivel' in df_prod.columns:
+        fig_temporal.add_trace(go.Scatter(
+            x=df_prod['Data'],
+            y=df_prod['Estoque_Disponivel'],
+            mode='lines+markers',
+            name='Estoque Físico',
+            line=dict(color='#3b82f6', width=2.5),
+            marker=dict(size=6)
+        ))
+
+    # Linha de Demanda/Vendas
+    if col_demanda:
+        fig_temporal.add_trace(go.Scatter(
+            x=df_prod['Data'],
+            y=df_prod[col_demanda],
+            mode='lines+markers',
+            name=label_demanda,
+            line=dict(color='#00ffaa', width=2.5),
+            marker=dict(size=6)
+        ))
+
+    fig_temporal.update_layout(
+        title=f"Evolução Temporal: Estoque Físico vs {label_demanda if col_demanda else 'Demanda'} — {produto_selecionado}",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font_color="#a3a3a3",
+        title_font_color="#ffffff",
+        hovermode="x unified",
+        margin=dict(l=20, r=20, t=50, b=20),
+        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", title="Data / Período"),
+        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", title="Unidades"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    st.plotly_chart(fig_temporal, use_container_width=True)
+
+    # --- CARDS DE MÉTRICAS LOGÍSTICAS ---
+    vendas_ou_demanda = int(df_prod[col_demanda].sum()) if col_demanda else 0
+    estoque_medio = int(df_prod['Estoque_Disponivel'].mean()) if 'Estoque_Disponivel' in df_prod.columns else 0
+    saldo_atual = int(df_prod['Estoque_Disponivel'].iloc[-1]) if 'Estoque_Disponivel' in df_prod.columns else 0
+    
+    # Cálculo de Dias de Estoque (Cobertura)
+    media_diaria = df_prod[col_demanda].mean() if col_demanda and len(df_prod) > 0 else 1
+    dias_cobertura = round(saldo_atual / media_diaria, 1) if media_diaria > 0 else 0
+
+    st.markdown(f"""
+    <div style="display: flex; gap: 20px; margin-top: 10px; margin-bottom: 30px;">
+        <div class="glass-card" style="flex: 1; margin-bottom: 0;">
+            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">{label_demanda if col_demanda else 'Demanda'} Acumulada</span>
+            <h3 style="color: #00ffaa; margin: 5px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_inteiro(vendas_ou_demanda)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h3>
+        </div>
+        <div class="glass-card" style="flex: 1; margin-bottom: 0;">
+            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Estoque Médio no Período</span>
+            <h3 style="color: #ffffff; margin: 5px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_inteiro(estoque_medio)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h3>
+        </div>
+        <div class="glass-card" style="flex: 1; margin-bottom: 0;">
+            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Saldo de Estoque Atual</span>
+            <h3 style="color: #ffffff; margin: 5px 0 0 0; font-size: 24px; font-weight: 600;">{formatar_inteiro(saldo_atual)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h3>
+        </div>
+        <div class="glass-card" style="flex: 1; margin-bottom: 0;">
+            <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Cobertura de Estoque</span>
+            <h3 style="color: {'#ef4444' if dias_cobertura < 3 else '#00ffaa'}; margin: 5px 0 0 0; font-size: 24px; font-weight: 600;">{dias_cobertura} <span style="font-size: 12px; color: #737373; font-weight: 400;">dias de giro</span></h3>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- GRÁFICO SECUNDÁRIO: COMPARATIVO GERAL POR PRODUTO ---
+    st.markdown("<h3 style='font-size: 17px; font-weight: 600; color: #ffffff; margin-bottom: 15px;'>Comparativo Geral de Inventário por Produto</h3>", unsafe_allow_html=True)
+
+    col_demanda_geral = 'Vendas_Do_Dia' if 'Vendas_Do_Dia' in df_analise.columns else ('Previsao_IA' if 'Previsao_IA' in df_analise.columns else None)
+    
+    if col_demanda_geral and 'Estoque_Disponivel' in df_analise.columns:
+        df_comp = df_analise.groupby('Produto').agg({
+            'Estoque_Disponivel': 'mean',
+            col_demanda_geral: 'sum'
+        }).reset_index()
+
+        fig_comp = go.Figure()
+        fig_comp.add_trace(go.Bar(
+            x=df_comp['Produto'],
+            y=df_comp['Estoque_Disponivel'],
+            name='Estoque Médio',
+            marker_color='#3b82f6'
+        ))
+        fig_comp.add_trace(go.Bar(
+            x=df_comp['Produto'],
+            y=df_comp[col_demanda_geral],
+            name='Demanda Total',
+            marker_color='#00ffaa'
+        ))
+
+        fig_comp.update_layout(
+            barmode='group',
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             font_color="#a3a3a3",
             title_font_color="#ffffff",
-            xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)"),
-            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.03)")
+            margin=dict(l=20, r=20, t=30, b=20),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", title="Unidades"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
-
-        vendas_totais = int(df_grafico['Vendas_Do_Dia'].sum()) if 'Vendas_Do_Dia' in df_grafico.columns else 0
-        estoque_medio = int(df_grafico['Estoque_Disponivel'].mean()) if 'Estoque_Disponivel' in df_grafico.columns else 0
-        saldo_atual = int(df_grafico['Estoque_Disponivel'].iloc[-1]) if 'Estoque_Disponivel' in df_grafico.columns else 0
-
-        st.markdown(f"""
-        <div style="display: flex; gap: 20px; margin-top: 15px;">
-            <div class="glass-card" style="flex: 1;">
-                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Volume Histórico Comercializado</span>
-                <h3 style="color: #ffffff; margin: 5px 0 0 0; font-size: 22px; font-weight: 500;">{formatar_inteiro(vendas_totais)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h3>
-            </div>
-            <div class="glass-card" style="flex: 1;">
-                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Estoque Médio Disponível</span>
-                <h3 style="color: #ffffff; margin: 5px 0 0 0; font-size: 22px; font-weight: 500;">{formatar_inteiro(estoque_medio)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h3>
-            </div>
-            <div class="glass-card" style="flex: 1;">
-                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #737373; font-weight:600;">Saldo Atual de Estoque</span>
-                <h3 style="color: #ffffff; margin: 5px 0 0 0; font-size: 22px; font-weight: 500;">{formatar_inteiro(saldo_atual)} <span style="font-size: 12px; color: #737373; font-weight: 400;">un.</span></h3>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.plotly_chart(fig_comp, use_container_width=True)
 
 elif st.session_state["aba_ativa"] == "Metodologia IA":
     st.markdown("<h2 style='font-size:22px; font-weight:600; margin-bottom:5px; color:#ffffff;'>Metodologia Científica & Algoritmo de IA</h2>", unsafe_allow_html=True)
@@ -951,7 +1194,7 @@ elif st.session_state["aba_ativa"] == "Metodologia IA":
         Ele garante que, mesmo diante de variações imprevistas nos tempos de entrega dos fornecedores ou picos repentinos 
         de procura, o varejista não sofra com rupturas.
         
-        A fórmula de contingenciamento applied na interface calcula o estoque de segurança dinâmico da seguinte forma:
+        A fórmula de contingenciamento aplicada na interface calcula o estoque de segurança dinâmico da seguinte forma:
         """)
         
         st.latex(r"ES = V_{\text{média}} \times 1.5")
